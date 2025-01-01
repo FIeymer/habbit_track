@@ -1,0 +1,6 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: app_folder/Dockerfile
+    container_name: habit_tracker_bot
