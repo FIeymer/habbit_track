@@ -1,6 +1,25 @@
 services:
-  web:
+  bot:
     build:
       context: .
       dockerfile: app_folder/Dockerfile
     container_name: habit_tracker_bot
+
+  db:
+    container_name: postgres_db
+    image: postgres:15
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: habits_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init_db.sh:/docker-entrypoint-init.d/init_db.sh
+      - ./db:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d habits_db -U admin"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
