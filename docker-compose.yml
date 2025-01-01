@@ -4,8 +4,13 @@ services:
       context: .
       dockerfile: app_folder/Dockerfile
     container_name: habit_tracker_bot
+    networks:
+      - app_network
+    depends_on:
+      postgres_db:
+        condition: service_healthy
 
-  db:
+  postgres_db:
     container_name: postgres_db
     image: postgres:15
     environment:
@@ -23,3 +28,9 @@ services:
       timeout: 60s
       retries: 5
       start_period: 80s
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
