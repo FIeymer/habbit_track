@@ -1,12 +1,12 @@
 import telebot
+import httpx
 from telebot.types import Message, Dict, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, CallbackQuery
 
 from config import BOT_TOKEN
 from phrase import phrase_dict
-from models import User
-from database import session
 
 bot = telebot.TeleBot(BOT_TOKEN)
+FASTAPI_URL = "http://habit_tracker_api:8000/users/"
 
 # creating user states
 user_states: Dict[int, Dict[str, str]] = {}
@@ -56,14 +56,20 @@ def callback_query(call: CallbackQuery) -> None:
     bot.send_message(call.message.chat.id, phrase_dict[call.data]['help_text'])
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
 
-    user = User(
-        user_id=call.from_user.id,
-        username=call.from_user.username,
-        first_name=call.from_user.first_name,
-        last_name=call.from_user.last_name,
-        language=call.data
-    )
+    user_data = {
+        "user_id": call.from_user.id,
+        "username": call.from_user.username,
+        "first_name": call.from_user.first_name,
+        "last_name": call.from_user.last_name,
+        "language": call.data,
+    }
 
-    session.merge(user)
-    session.commit()
+    try:
+        response = httpx.post(FASTAPI_URL, json=user_data)
+        response.raise_for_status()
+        bot.send_message(call.message.chat.id, "Данные пользователя сохранены.")
+    except httpx.RequestError as e:
+        bot.send_message(call.message.chat.id, f"Ошибка соединения с сервером: {e}")
+    except httpx.HTTPStatusError as e:
+        bot.send_message(call.message.chat.id, f"Ошибка сервера: {e.response.text}")
 

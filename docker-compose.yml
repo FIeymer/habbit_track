@@ -31,6 +31,21 @@ services:
     networks:
       - app_network
 
+  api_server:
+    build:
+      context: .
+      dockerfile: server_folder/Dockerfile
+    container_name: habit_tracker_api
+    environment:
+      - DATABASE_URL=postgresql://admin:admin@postgres_db:5432/habits_db
+    ports:
+      - "8000:8000"
+    networks:
+      - app_network
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+
 networks:
   app_network:
     driver: bridge

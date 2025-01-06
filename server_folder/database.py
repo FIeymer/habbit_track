@@ -15,3 +15,10 @@ engine = create_engine(
 )
 Session = sessionmaker(bind=engine)
 session = Session()
+
+def get_db():
+    db = Session()
+    try:
+        yield db
+    finally:
+        db.close()

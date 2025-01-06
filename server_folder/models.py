@@ -12,4 +12,5 @@ class User(Base):
     last_name = Column(String)
     language = Column(String)
 
+
 Base.metadata.create_all(bind=engine)
