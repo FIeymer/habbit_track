@@ -4,6 +4,7 @@ from telebot.types import Message, Dict, InlineKeyboardMarkup, InlineKeyboardBut
 
 from config import BOT_TOKEN
 from phrase import phrase_dict
+from models import User
 
 bot = telebot.TeleBot(BOT_TOKEN)
 FASTAPI_URL = "http://habit_tracker_api:8000/users/"
@@ -18,13 +19,19 @@ STEP_PROCESS_DATA = "process_data"
 commands_eng = [
     BotCommand("/add_new_habit", "Send to add new habit"),
     BotCommand("/help", "Show help message"),
+    BotCommand("/add_habit", "Add new habit to the list")
 ]
 
 commands_rus = [
     BotCommand("/add_new_habit", "Отправьте для добавления новой привычки"),
     BotCommand("/help", "Показать справку"),
+    BotCommand("/add_habit", "Добавить в список новую привычку")
 ]
 
+
+def get_user_language(user_id: int) -> str:
+    user = User.get(User.user_id)
+    return user.language
 
 def choose_langs() -> InlineKeyboardMarkup:
     # Creating buttons
@@ -35,6 +42,7 @@ def choose_langs() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup()
     keyboard.add(button_1, button_2)
     return keyboard
+
 
 @bot.message_handler(commands=['start'])
 def handle_start(message: Message) -> None:
@@ -73,3 +81,8 @@ def callback_query(call: CallbackQuery) -> None:
     except httpx.HTTPStatusError as e:
         bot.send_message(call.message.chat.id, f"Ошибка сервера: {e.response.text}")
 
+
+@bot.message_handler(commands=['add_habit'])
+def add_habit(message: Message) -> None:
+    lang = get_user_language(message.from_user.id)
+    bot.send_message(message.chat.id, lang)

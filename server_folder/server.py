@@ -9,6 +9,7 @@ from models import User
 
 app = FastAPI()
 
+
 class UserBase(BaseModel):
     user_id: int
     username: str
@@ -18,6 +19,7 @@ class UserBase(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 @app.post("/users/")
 async def create_user(user: UserBase, db: Session = Depends(get_db)):

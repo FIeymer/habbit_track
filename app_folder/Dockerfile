@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
 COPY app_folder/ /app_folder/
+COPY server_folder/models .
 
 # Run the bot
 CMD ["python", "-c", "from commands import bot; bot.infinity_polling()"]
