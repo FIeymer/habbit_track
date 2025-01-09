@@ -19,7 +19,7 @@ class Habits(Base):
     __tablename__ = "habits"
 
     habit_id = Column(Integer, primary_key=True)
-    habits_title = Column(String)
+    habit_title = Column(String)
     user_id = Column(Integer, ForeignKey("user.user_id"))
     author = relationship("User", back_populates="habits")
 
