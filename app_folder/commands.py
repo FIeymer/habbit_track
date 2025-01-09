@@ -1,3 +1,9 @@
+# TODO: привычки добавляются капсом - исправить
+# TODO: Посмотреть пункт 3 в ТЗ и реализововать согласно описанию
+# TODO: Добавить учёт дней в привычке
+# TODO: Добавить напоминание о выполнение привычки в заданный момент времени
+# TODO: Добавить возможность отмечать выполнение привычки, если не выполнена сбрасывать счётчик
+
 import telebot
 import httpx
 from telebot.types import Message, Dict, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, CallbackQuery
