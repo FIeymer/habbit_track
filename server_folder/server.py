@@ -32,7 +32,6 @@ async def create_user(user: UserBase, db: Session = Depends(get_db)):
     )
     db.merge(new_user)
     db.commit()
-    #db.refresh(new_user)
     return {"message": "User created successfully"}
 
 
@@ -43,7 +42,7 @@ async def get_language(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/users/habit")
-async def get_language(user_id: int, habit_title: str, db: Session = Depends(get_db)):
+async def add_habit(user_id: int, habit_title: str, db: Session = Depends(get_db)):
     new_habit = Habits(user_id=user_id, habit_title=habit_title)
     db.add(new_habit)
     db.commit()
@@ -58,7 +57,18 @@ async def delete_habit(user_id: int, habit_title: str, db: Session = Depends(get
 
 
 @app.post("/users/habits_list")
-async def get_habits_list(user_id: int, db: Session = Depends(get_db)):
-    db.query(Habits).filter_by(user_id=user_id).all()
+async def get_habits_list(user_id: int, list_type: str, db: Session = Depends(get_db)):
+    if list_type == 'daily':
+        db.query(Habits).filter_by(user_id=user_id, today_status=False).all()
+    elif list_type == 'total':
+        db.query(Habits).filter_by(user_id=user_id).all()
     habit_titles = [title[0] for title in db.query(Habits.habit_title).filter_by(user_id=user_id).all()]
     return habit_titles
+
+
+@app.post("/users/habit_completed")
+async def mark_habit(user_id: int, habit_title: str, db: Session = Depends(get_db)):
+    db.query(Habits).filter_by(user_id=user_id,
+                               habit_title=habit_title).update({"today_status": True})
+    db.commit()
+    return {"message": "Habit completed successfully"}

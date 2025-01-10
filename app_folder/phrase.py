@@ -9,7 +9,12 @@ phrase_dict = {'Rus':
         'add_habit': 'Напишите описание новой привычки',
         'habit_added': 'Привычка добавлена в ваш список!',
         'delete_habit': 'Выберите привычку которую вы хотите удалить:',
-        'habit_deleted': 'Привычка удалена'
+        'habit_deleted': 'Привычка удалена',
+        'check_daily_habits': 'Посмотреть ваш список привычек на сегодня: /daily_habits',
+        'daily_habits': 'Вот ваш список привычек на сегодня.'
+                        '\nЕсли вы выполнили привычку можете отметить её в списке.',
+        'habit_completed': 'Привычка успешно отмечена как выполнена. Продолжайте в том же духе!',
+
     },
     'Eng':
         {
@@ -22,6 +27,10 @@ phrase_dict = {'Rus':
             'add_habit': 'Write a description for the new habit',
             'habit_added': 'Habit added successfully!',
             'delete_habit': 'Select the habit you want to delete:',
-            'habit_deleted': 'Habit removed'
+            'habit_deleted': 'Habit removed',
+            'check_daily_habits': '',
+            'daily_habits': '',
+            'habit_completed': '',
+
         },
 }
