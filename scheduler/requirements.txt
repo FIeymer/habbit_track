@@ -1,4 +1,1 @@
-pyTelegramBotAPI
-sqlalchemy
-postgres
 apscheduler
