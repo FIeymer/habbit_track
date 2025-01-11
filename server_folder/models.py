@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, Boolean
+from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, Time
 from sqlalchemy.orm import relationship
 
 from database import Base, engine
@@ -23,6 +23,7 @@ class Habits(Base):
     user_id = Column(Integer, ForeignKey("user.user_id"))
     today_status = Column(Boolean, default=False)
     days_count = Column(Integer, default=0)
+    reminder = Column(Time)
     author = relationship("User", back_populates="habits")
 
 

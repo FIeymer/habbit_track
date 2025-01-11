@@ -1,8 +1,3 @@
-# TODO: Посмотреть пункт 3 в ТЗ и реализововать согласно описанию
-# TODO: Добавить учёт дней в привычке
-# TODO: Добавить напоминание о выполнение привычки в заданный момент времени
-# TODO: Добавить возможность отмечать выполнение привычки, если не выполнена сбрасывать счётчик
-
 import telebot
 import httpx
 from telebot.types import Message, Dict, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, CallbackQuery
@@ -190,8 +185,13 @@ def delete_habit(message: Message) -> None:
 def chose_habit(user_id: int, list_type='total') -> InlineKeyboardMarkup:
     habits_list = get_habits_list(user_id, list_type)
     keyboard = InlineKeyboardMarkup()
-    for habit in habits_list:
-        button = InlineKeyboardButton(text=habit, callback_data=habit)
+    if habits_list is None:
+        habits_list = []
+    for habit_dict in habits_list:
+        habit_title = habit_dict["habit_title"]
+        days_count = habit_dict["days_count"]
+        text = f"{habit_title} ({days_count}/21)"
+        button = InlineKeyboardButton(text=text, callback_data=habit_title)
         keyboard.add(button)
     return keyboard
 
@@ -231,11 +231,14 @@ def daily_habit(call: CallbackQuery) -> None:
 
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
     try:
-        response = httpx.delete(f"{FASTAPI_URL}habit_completed",
+        response = httpx.post(f"{FASTAPI_URL}habit_completed",
                                 params={"user_id": call.message.chat.id,
                                         "habit_title": habit_title})
         response.raise_for_status()
-        bot.send_message(call.message.chat.id, phrase_dict[lang]['habit_completed'])
+        if response.json()["message"] == "Habit completed successfully":
+            bot.send_message(call.message.chat.id, phrase_dict[lang]['habit_completed_21'])
+        else:
+            bot.send_message(call.message.chat.id, phrase_dict[lang]['habit_completed'])
     except httpx.RequestError as e:
         bot.send_message(call.message.chat.id, f"Ошибка соединения с сервером: {e}")
     except httpx.HTTPStatusError as e:
