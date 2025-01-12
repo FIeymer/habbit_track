@@ -2,11 +2,12 @@ from datetime import datetime
 
 import telebot
 import httpx
+import re
 from telebot.types import Message, Dict, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, CallbackQuery
 
 from config import BOT_TOKEN
 from phrase import phrase_dict
-from commands import get_user_language, get_habits_list, scheduler, schedule_user_reminders
+from commands import get_user_language, get_habits_list, get_all_habits, get_habit_id,check_habit_status
 
 import logging
 
@@ -30,7 +31,9 @@ STEP_PROCESS_DATA = "process_data"
 STEP_SET_LANG = "set_lang"
 STEP_DELETE_HABIT = "delete_habit"
 STEP_DAILY_STATUS = "daily_status"
-STEP_ASK_REMINDER = "set_reminder"
+STEP_ASK_TIME = "set_time"
+STEP_UPDATE_HABIT = "update_habit"
+STEP_ASK_HABIT_STATUS = "ask_habit_status"
 
 # creating hint for bot command
 commands_eng = [
@@ -39,6 +42,7 @@ commands_eng = [
     BotCommand("/add_habit", "Add new habit to the list"),
     BotCommand("/delete_habit", "Remove a habit from the list"),
     BotCommand("/daily_habits", "Remove a habit from the list"),
+    BotCommand("/update_reminder", "Update the habit reminder")
 ]
 
 commands_rus = [
@@ -47,15 +51,23 @@ commands_rus = [
     BotCommand("/add_habit", "Добавить в список новую привычку"),
     BotCommand("/delete_habit", "Удалить из списка привычку"),
     BotCommand("/daily_habits", "Посмотреть список привычек на сегодня"),
+    BotCommand("/update_reminder", "Обновить напоминание о привычке")
 ]
 
 
 def choose_langs() -> InlineKeyboardMarkup:
-    # Creating buttons
     button_1 = InlineKeyboardButton(text="Eng", callback_data="Eng")
     button_2 = InlineKeyboardButton(text="Rus", callback_data="Rus")
 
-    # Creating keyboard and adding buttons to keyboard
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(button_1, button_2)
+    return keyboard
+
+
+def yes_or_no_keyboard() -> InlineKeyboardMarkup:
+    button_1 = InlineKeyboardButton(text="Да", callback_data="Yes")
+    button_2 = InlineKeyboardButton(text="Нет", callback_data="No")
+
     keyboard = InlineKeyboardMarkup()
     keyboard.add(button_1, button_2)
     return keyboard
@@ -131,7 +143,7 @@ def adding_habit(message: Message) -> None:
     habit_title = message.text
     lang = get_user_language(message.from_user.id)
     user_states[message.chat.id] = {
-        'step': STEP_ASK_REMINDER,
+        'step': STEP_ASK_TIME,
         'habit_title': habit_title
     }
 
@@ -140,35 +152,50 @@ def adding_habit(message: Message) -> None:
                                                              "habit_title": habit_title})
         response.raise_for_status()
         bot.send_message(message.chat.id, phrase_dict[lang]['habit_added'])
-        bot.send_message(message.chat.id, phrase_dict[lang]['check_daily_habits'])
+        bot.send_message(message.chat.id, phrase_dict[lang]['asking_time'])
+
     except httpx.RequestError as e:
         bot.send_message(message.chat.id, f"Ошибка соединения с сервером: {e}")
     except httpx.HTTPStatusError as e:
         bot.send_message(message.chat.id, f"Ошибка сервера: {e.response.text}")
 
 
-@bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('step') == STEP_ASK_REMINDER)
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('step') == STEP_ASK_TIME)
 def aks_time(message: Message) -> None:
     lang = get_user_language(message.from_user.id)
-    user_states[message.chat.id]['step'] = STEP_PROCESS_DATA
     habit_title = user_states[message.chat.id]['habit_title']
-    time = message.text  # Ожидается формат 'HH:MM'
-    reminder_time = datetime.strptime(time, "%H:%M").time()
+    time = message.text
 
-    if reminder_time:
+    if re.match(r"^\d{2}:\d{2}$", time):
+        reminder_time = datetime.strptime(time, "%H:%M").time()
         try:
             response = httpx.post(f"{FASTAPI_URL}update_reminder", params={"user_id": message.from_user.id,
                                                                            "habit_title": habit_title,
                                                                            "time": reminder_time})
             response.raise_for_status()
-            bot.send_message(message.chat.id, phrase_dict[lang]['habit_added'])
+            habit_id = get_habit_id(habit_title, message.from_user.id)
+            bot.send_message(message.chat.id, phrase_dict[lang]['reminder_added'])
             bot.send_message(message.chat.id, phrase_dict[lang]['check_daily_habits'])
+            update_habit_reminder(habit_id, time, message.from_user.id, habit_title)
+            user_states[message.chat.id]['step'] = STEP_PROCESS_DATA
         except httpx.RequestError as e:
             bot.send_message(message.chat.id, f"Ошибка соединения с сервером: {e}")
         except httpx.HTTPStatusError as e:
             bot.send_message(message.chat.id, f"Ошибка сервера: {e.response.text}")
-        except ValueError:
-            bot.send_message(message.chat.id, "Пожалуйста, введите время в формате HH:MM.")
+    else:
+        bot.send_message(message.chat.id, phrase_dict[lang]['invalid_time'])
+        user_states[message.chat.id]['step'] = STEP_ASK_TIME
+
+@bot.message_handler(commands=['delete_habit'])
+def delete_habit(message: Message) -> None:
+    lang = get_user_language(message.from_user.id)
+    bot.send_message(message.chat.id,
+                     phrase_dict[lang]['delete_habit'],
+                     reply_markup=chose_habit(message.from_user.id))
+
+    user_states[message.chat.id] = {
+        'step': STEP_DELETE_HABIT,
+    }
 
 
 @bot.callback_query_handler(
@@ -191,30 +218,21 @@ def delete_habit(call: CallbackQuery) -> None:
         bot.send_message(call.message.chat.id, f"Ошибка сервера: {e.response.text}")
 
 
-@bot.message_handler(commands=['delete_habit'])
-def delete_habit(message: Message) -> None:
-    lang = get_user_language(message.from_user.id)
-    bot.send_message(message.chat.id,
-                     phrase_dict[lang]['delete_habit'],
-                     reply_markup=chose_habit(message.from_user.id))
-
-    user_states[message.chat.id] = {
-        'step': STEP_DELETE_HABIT,
-    }
-
-
 def chose_habit(user_id: int, list_type='total') -> InlineKeyboardMarkup:
     habits_list = get_habits_list(user_id, list_type)
-    keyboard = InlineKeyboardMarkup()
-    if habits_list is None:
-        habits_list = []
-    for habit_dict in habits_list:
-        habit_title = habit_dict["habit_title"]
-        days_count = habit_dict["days_count"]
-        text = f"{habit_title} ({days_count}/21)"
-        button = InlineKeyboardButton(text=text, callback_data=habit_title)
-        keyboard.add(button)
-    return keyboard
+    if isinstance(habits_list, str):
+        bot.send_message(user_id, habits_list)
+    else:
+        keyboard = InlineKeyboardMarkup()
+        if habits_list is None:
+            habits_list = []
+        for habit_dict in habits_list:
+            habit_title = habit_dict["habit_title"]
+            days_count = habit_dict["days_count"]
+            text = f"{habit_title} ({days_count}/21)"
+            button = InlineKeyboardButton(text=text, callback_data=habit_title)
+            keyboard.add(button)
+        return keyboard
 
 
 @bot.message_handler(commands=['daily_habits'])
@@ -253,14 +271,112 @@ def daily_habit(call: CallbackQuery) -> None:
         bot.send_message(call.message.chat.id, f"Ошибка сервера: {e.response.text}")
 
 
+@bot.message_handler(commands=['update_reminder'])
+def update_reminder(message: Message) -> None:
+    lang = get_user_language(message.from_user.id)
+    bot.send_message(message.chat.id,
+                     phrase_dict[lang]['update_reminder'],
+                     reply_markup=chose_habit(message.from_user.id))
+
+    user_states[message.chat.id] = {
+        'step': STEP_UPDATE_HABIT,
+    }
+
+
+@bot.callback_query_handler(
+    func=lambda query: user_states.get(query.message.chat.id, {}).get('step') == STEP_UPDATE_HABIT)
+def updating_reminder(call: CallbackQuery) -> None:
+    habit_title = call.data
+    lang = get_user_language(call.message.chat.id)
+
+    user_states[call.message.chat.id] = {
+        'step': STEP_ASK_TIME,
+        'habit_title': habit_title,
+    }
+
+    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
+    bot.send_message(call.message.chat.id, phrase_dict[lang]['update_reminder2'])
+
+
 def send_reminder(user_id, habit_title):
-    bot.send_message(user_id, f"Это ваше напоминание! Не забудьте обновить свои привычки. {habit_title} 🌟")
+    status = check_habit_status(user_id, habit_title)
+    if not status:
+        lang = get_user_language(user_id)
+        message = phrase_dict[lang]['send_reminder'].format(habit_title=habit_title)
+
+        bot.send_message(user_id, message,  reply_markup=yes_or_no_keyboard())
+        user_states[user_id] = {
+            'step': STEP_ASK_HABIT_STATUS,
+            'habit_title': habit_title,
+        }
 
 
+@bot.callback_query_handler(func=lambda query: user_states.get(query.message.chat.id, {}).get('step') == STEP_ASK_HABIT_STATUS)
+def handle_habit_response(call):
+    habit_title = user_states[call.message.chat.id]['habit_title']
+    lang = get_user_language(call.message.chat.id)
+    if call.data == "Yes":
+        try:
+            response = httpx.post(f"{FASTAPI_URL}habit_completed",
+                                  params={"user_id": call.message.chat.id,
+                                          "habit_title": habit_title})
+            response.raise_for_status()
+            if response.json()["message"] == "Habit completed successfully":
+                bot.send_message(call.message.chat.id, phrase_dict[lang]['habit_completed_21'])
+            else:
+                bot.send_message(call.message.chat.id, phrase_dict[lang]['habit_completed'])
+        except httpx.RequestError as e:
+            bot.send_message(call.message.chat.id, f"Ошибка соединения с сервером: {e}")
+        except httpx.HTTPStatusError as e:
+            bot.send_message(call.message.chat.id, f"Ошибка сервера: {e.response.text}")
+    elif call.data == "No":
+        bot.send_message(call.message.chat.id, phrase_dict[lang]['try_complete'])
+
+
+from apscheduler.schedulers.background import BackgroundScheduler
+def schedule_user_reminders():
+    habits = get_all_habits()
+    logger.info(f"Список -- {habits}")
+    if habits is None:
+        habits = []
+    logger.info(f"Список -- {habits}")
+    for habit in habits:
+        if habit["reminder_time"]:
+            hour, minute = map(int, habit["reminder_time"].split(":"))
+            job_id = f"reminder_{habit['habit_id']}"
+
+            if scheduler.get_job(job_id):
+                scheduler.remove_job(job_id)
+
+            scheduler.add_job(
+                send_reminder,
+                "cron",
+                hour=hour,
+                minute=minute,
+                args=[habit["user_id"], habit['habit_title']],
+                id=job_id
+            )
+
+
+def update_habit_reminder(habit_id, reminder_time, user_id, habit_title):
+
+    hour, minute = map(int, reminder_time.split(":"))
+    job_id = f"reminder_{habit_id}"
+
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
+
+    scheduler.add_job(
+        send_reminder,
+        "cron",
+        hour=hour,
+        minute=minute,
+        args=[user_id, habit_title],
+        id=job_id
+    )
+
+
+scheduler = BackgroundScheduler()
 scheduler.start()
+
 schedule_user_reminders()
-# TODO после ввода названия привычки запрашивать время напоминания
-# TODO прописать логику получения всего списка привычек
-# TODO добавить возможность изменения напоминания времени
-# TODO обновлять задачи в кронтабе только у одной привычки, а не проходится по всем привычкам
-# TODO откорректировать send_reminder
