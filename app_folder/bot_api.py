@@ -315,6 +315,7 @@ def send_reminder(user_id, habit_title):
 def handle_habit_response(call):
     habit_title = user_states[call.message.chat.id]['habit_title']
     lang = get_user_language(call.message.chat.id)
+    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
     if call.data == "Yes":
         try:
             response = httpx.post(f"{FASTAPI_URL}habit_completed",

@@ -128,4 +128,4 @@ async def get_habit_id(habit_title: str, user_id: int, db: Session = Depends(get
 @app.post("/users/check_habit_status")
 async def check_habit_status(habit_title: str, user_id: int, db: Session = Depends(get_db)):
     habit = db.query(Habits).filter_by(user_id=user_id, habit_title=habit_title).first()
-    return habit.habit_id
+    return habit.today_status
