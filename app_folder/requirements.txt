@@ -2,3 +2,4 @@ pyTelegramBotAPI
 sqlalchemy
 postgres
 httpx
+apscheduler
