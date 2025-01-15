@@ -105,3 +105,27 @@ async def reset_days(db: Session = Depends(get_db)):
     db.commit()
 
 
+@app.post("/users/all_habits")
+async def get_all_habits(db: Session = Depends(get_db)):
+    habits = db.query(Habits).all
+    logger.info(f"\n\n ПРИВЫЧКИ: {habits}")
+    return habits
+
+
+@app.post("/users/update_reminder")
+async def update_reminder(user_id: int, habit_title: str, time, db: Session = Depends(get_db)):
+    db.query(Habits).filter_by(user_id=user_id,
+                               habit_title=habit_title).update({"reminder": time})
+    db.commit()
+
+
+@app.post("/users/habit_id")
+async def get_habit_id(habit_title: str, user_id: int, db: Session = Depends(get_db)):
+    habit = db.query(Habits).filter_by(user_id=user_id, habit_title=habit_title).first()
+    return habit.habit_id
+
+
+@app.post("/users/check_habit_status")
+async def check_habit_status(habit_title: str, user_id: int, db: Session = Depends(get_db)):
+    habit = db.query(Habits).filter_by(user_id=user_id, habit_title=habit_title).first()
+    return habit.today_status
