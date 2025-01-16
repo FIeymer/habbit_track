@@ -27,7 +27,9 @@ phrase_dict = {'Rus':
         'send_reminder': 'Напоминаю о выполнении привычки - {habit_title}.'
                          '\n Вы уже выполнили её?',
         'try_complete': 'Что ж, тогда попытайтесь выполнить привычку до конца дня как можно скорее.'
-                        '\n Отметить привычку как выполненная, а также посмотреть список привычек на сегодня можно с помощью /daily_habits'
+                        '\n Отметить привычку как выполненная, а также посмотреть список привычек на сегодня можно с помощью /daily_habits',
+        'yes': 'Да',
+        'no' : 'Нет'
 
 
     },
@@ -40,7 +42,7 @@ phrase_dict = {'Rus':
                          '\n/add_habit - Add new habit to the list'
                          '\n/delete_habit - Remove the habit'
                          '\n/daily_habits - View the list of habits for today'
-                         '\n/update_reminder - Обновить напоминание о привычке',
+                         '\n/update_reminder - Update the habit reminder',
             'add_habit': 'Write a description for the new habit',
             'habit_added': 'Habit added successfully!',
             'delete_habit': 'Select the habit you want to delete:',
@@ -60,7 +62,8 @@ phrase_dict = {'Rus':
             'send_reminder': 'A reminder to perform the habit - {habit_title}.'
                              '\n Have you completed it yet?',
             'try_complete': 'Well, then try to execute the habit for the rest of the day as soon as possible.'
-                            '\n To mark a habit as done, and to see a list of the habits for today, use /daily_habits'
-
+                            '\n To mark a habit as done, and to see a list of the habits for today, use /daily_habits',
+            'yes': 'Yes',
+            'no' : 'No'
         },
 }

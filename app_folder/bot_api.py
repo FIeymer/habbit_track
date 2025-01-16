@@ -64,9 +64,9 @@ def choose_langs() -> InlineKeyboardMarkup:
     return keyboard
 
 
-def yes_or_no_keyboard() -> InlineKeyboardMarkup:
-    button_1 = InlineKeyboardButton(text="Да", callback_data="Yes")
-    button_2 = InlineKeyboardButton(text="Нет", callback_data="No")
+def yes_or_no_keyboard(lang) -> InlineKeyboardMarkup:
+    button_1 = InlineKeyboardButton(text=phrase_dict[lang]['yes'], callback_data="Yes")
+    button_2 = InlineKeyboardButton(text=phrase_dict[lang]['no'], callback_data="No")
 
     keyboard = InlineKeyboardMarkup()
     keyboard.add(button_1, button_2)
@@ -304,7 +304,7 @@ def send_reminder(user_id, habit_title):
         lang = get_user_language(user_id)
         message = phrase_dict[lang]['send_reminder'].format(habit_title=habit_title)
 
-        bot.send_message(user_id, message,  reply_markup=yes_or_no_keyboard())
+        bot.send_message(user_id, message,  reply_markup=yes_or_no_keyboard(lang))
         user_states[user_id] = {
             'step': STEP_ASK_HABIT_STATUS,
             'habit_title': habit_title,
